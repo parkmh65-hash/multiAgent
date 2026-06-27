@@ -1,5 +1,6 @@
 import os
 import json
+
 from langchain_core.messages import (
     HumanMessage,
     AIMessage,
@@ -36,8 +37,8 @@ def save_state(thread_id, state):
 
         data.append(
             {
-                "type":m.__class__.__name__,
-                "content":m.content
+                "type": m.__class__.__name__,
+                "content": m.content
             }
         )
 
@@ -50,7 +51,8 @@ def save_state(thread_id, state):
 
         json.dump(
             {
-                "messages":data
+                "thread_id": thread_id,
+                "messages": data
             },
             f,
             ensure_ascii=False,
@@ -75,51 +77,53 @@ def load_state(thread_id):
         encoding="utf-8"
     ) as f:
 
-        data=json.load(f)
+        data = json.load(f)
 
 
-
-    messages=[]
+    messages = []
 
 
     for m in data["messages"]:
 
-        if m["type"]=="HumanMessage":
+        if m["type"] == "HumanMessage":
+
             messages.append(
                 HumanMessage(
-                    m["content"]
+                    content=m["content"]
                 )
             )
 
-        elif m["type"]=="AIMessage":
+
+        elif m["type"] == "AIMessage":
 
             messages.append(
                 AIMessage(
-                    m["content"]
+                    content=m["content"]
                 )
             )
 
-        elif m["type"]=="SystemMessage":
+
+        elif m["type"] == "SystemMessage":
 
             messages.append(
                 SystemMessage(
-                    m["content"]
+                    content=m["content"]
                 )
             )
 
 
     return {
-        "messages":messages
+        "thread_id": thread_id,
+        "messages": messages
     }
-
 
 
 
 def get_outline(thread_id):
 
-    path=get_user_path(thread_id)
+    path = get_user_path(thread_id)
 
-    file=f"{path}/outline.md"
+    file = f"{path}/outline.md"
 
 
     if not os.path.exists(file):
@@ -127,11 +131,12 @@ def get_outline(thread_id):
         return "아직 작성된 목차가 없습니다."
 
 
-    return open(
+    with open(
         file,
         encoding="utf-8"
-    ).read()
+    ) as f:
 
+        return f.read()
 
 
 
@@ -140,7 +145,7 @@ def save_outline(
     outline
 ):
 
-    path=get_user_path(thread_id)
+    path = get_user_path(thread_id)
 
 
     with open(
