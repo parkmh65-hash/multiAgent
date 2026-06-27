@@ -1,22 +1,40 @@
-from langchain_openai import ChatOpenAI
-
-from langchain_core.prompts import (
-    ChatPromptTemplate,
-    MessagesPlaceholder,
+from langgraph.graph import (
+    StateGraph,
+    START,
+    END,
 )
 
-from langchain_core.messages import (
-    SystemMessage,
-    AIMessage,
+from state import State
+from agents import (
+    content_strategist,
+    communicator,
 )
 
-from langchain_core.output_parsers import StrOutputParser
+builder = StateGraph(State)
 
-from utils import (
-    get_outline,
-    save_outline,
+builder.add_node(
+    "strategist",
+    content_strategist,
 )
 
-llm = ChatOpenAI(
-    model="gpt-4o"
+builder.add_node(
+    "communicator",
+    communicator,
 )
+
+builder.add_edge(
+    START,
+    "strategist",
+)
+
+builder.add_edge(
+    "strategist",
+    "communicator",
+)
+
+builder.add_edge(
+    "communicator",
+    END,
+)
+
+graph = builder.compile()
