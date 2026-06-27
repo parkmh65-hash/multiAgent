@@ -16,58 +16,46 @@ from datetime import datetime
 import os
 import uvicorn
 
-# ✅ 수정 - app 정의 뒤로 이동
 app = FastAPI(
     title="Book Writer Agent"
 )
-@app.get("/")
-def home(): ...
 
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 8080))
-    uvicorn.run("main:app", host="0.0.0.0", port=port)
-    
-# 헬스 체크 엔드포인트 추가
-@app.get("/healthz")
-def health_check():
-    return {"status": "ok"}
 
 class ChatRequest(BaseModel):
-
-    user_input:str
-    thread_id:str = "default"
-
+    user_input: str
+    thread_id: str = "default"
 
 
 @app.get("/")
 def home():
-
     return {
-        "status":"book writer running"
+        "status": "book writer running"
     }
 
 
+@app.get("/healthz")
+def health_check():
+    return {
+        "status": "ok"
+    }
 
 
 @app.post("/chat")
-def chat(
-    req:ChatRequest
-):
+def chat(req: ChatRequest):
 
+    state = load_state(req.thread_id)
 
-    state = load_state(
-        req.thread_id
-    )
-
-
+    # 처음 시작하는 경우
     if state is None:
 
         state = {
 
-            "messages":[
+            "thread_id": req.thread_id,
+
+            "messages": [
 
                 SystemMessage(
-f"""
+                    content=f"""
 너희는 AI 책 집필팀이다.
 
 사용자의 언어로 대화한다.
@@ -81,36 +69,49 @@ f"""
 
         }
 
+    # 이전 상태를 불러온 경우에도 thread_id 추가
+    else:
 
+        state["thread_id"] = req.thread_id
 
     state["messages"].append(
-        HumanMessage(
-            req.user_input
-        )
-    )
 
+        HumanMessage(
+            content=req.user_input
+        )
+
+    )
 
     # LangGraph 실행
-
-    result = graph.invoke(
-        state
-    )
-
+    result = graph.invoke(state)
 
     save_state(
         req.thread_id,
         result
     )
 
-
     answer = result["messages"][-1].content
-
 
     return {
 
-        "response":answer,
+        "response": answer,
 
-        "message_count":
-        len(result["messages"])
+        "message_count": len(result["messages"])
 
     }
+
+
+if __name__ == "__main__":
+
+    port = int(
+        os.environ.get(
+            "PORT",
+            8080
+        )
+    )
+
+    uvicorn.run(
+        "main:app",
+        host="0.0.0.0",
+        port=port
+    )
