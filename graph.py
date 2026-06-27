@@ -5,8 +5,8 @@ from langgraph.graph import (
 )
 
 
-from multi.state import State
-from multi.agents import (
+from state import State
+from agents import (
     content_strategist,
     communicator
 )
