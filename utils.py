@@ -10,13 +10,13 @@ from langchain_core.messages import (
 from models import Task
 
 
-BASE_DIR = "data"
+BASE_DIR="data"
 
 
 
 def get_user_path(thread_id):
 
-    path = os.path.join(
+    path=os.path.join(
         BASE_DIR,
         thread_id
     )
@@ -30,31 +30,22 @@ def get_user_path(thread_id):
 
 
 
-# =========================
-# State 저장
-# =========================
+def save_state(thread_id,state):
 
-def save_state(
-    thread_id,
-    state
-):
-
-    path = get_user_path(
+    path=get_user_path(
         thread_id
     )
 
 
-    state_dict = {}
+    data={}
 
 
-    # messages
+    data["messages"]=[
 
-    state_dict["messages"] = [
-
-        (
-            m.__class__.__name__,
-            m.content
-        )
+        {
+            "type":m.__class__.__name__,
+            "content":m.content
+        }
 
         for m in state["messages"]
 
@@ -62,13 +53,11 @@ def save_state(
 
 
 
-    # task history
+    data["task_history"]=[
 
-    state_dict["task_history"] = [
+        t.to_dict()
 
-        task.to_dict()
-
-        for task in state.get(
+        for t in state.get(
             "task_history",
             []
         )
@@ -77,37 +66,24 @@ def save_state(
 
 
 
-    # references
-
-    references = state.get(
+    refs=state.get(
         "references",
         {
-            "queries": [],
-            "docs": []
+            "queries":[],
+            "docs":[]
         }
     )
 
 
-    state_dict["references"] = {
-
+    data["references"]={
 
         "queries":
-            references.get(
-                "queries",
-                []
-            ),
-
+            refs.get("queries",[]),
 
         "docs":
         [
-
-            doc.metadata
-
-            for doc in references.get(
-                "docs",
-                []
-            )
-
+            d.metadata
+            for d in refs.get("docs",[])
         ]
 
     }
@@ -115,46 +91,29 @@ def save_state(
 
 
     with open(
-
         f"{path}/state.json",
-
         "w",
-
         encoding="utf-8"
-
     ) as f:
 
-
         json.dump(
-
-            state_dict,
-
+            data,
             f,
-
             indent=4,
-
             ensure_ascii=False
-
         )
 
 
 
 
 
-# =========================
-# State 불러오기
-# =========================
+def load_state(thread_id):
 
-def load_state(
-    thread_id
-):
-
-    path = get_user_path(
+    path=get_user_path(
         thread_id
     )
 
-
-    file = f"{path}/state.json"
+    file=f"{path}/state.json"
 
 
     if not os.path.exists(file):
@@ -168,114 +127,76 @@ def load_state(
         encoding="utf-8"
     ) as f:
 
-        data = json.load(f)
+        data=json.load(f)
 
 
 
     messages=[]
 
 
-    for msg in data["messages"]:
+    for m in data["messages"]:
 
-        role = msg[0]
-
-        content = msg[1]
-
-
-        if role=="HumanMessage":
+        if m["type"]=="HumanMessage":
 
             messages.append(
                 HumanMessage(
-                    content=content
+                    m["content"]
                 )
             )
 
 
-        elif role=="AIMessage":
+        elif m["type"]=="AIMessage":
 
             messages.append(
                 AIMessage(
-                    content=content
+                    m["content"]
                 )
             )
 
 
-        elif role=="SystemMessage":
+        else:
 
             messages.append(
                 SystemMessage(
-                    content=content
+                    m["content"]
                 )
             )
-
-
-
-    tasks=[
-
-        Task(**task)
-
-        for task in data.get(
-            "task_history",
-            []
-        )
-
-    ]
 
 
 
     return {
 
-        "messages":
-            messages,
-
+        "messages":messages,
 
         "task_history":
-            tasks,
-
+        [
+            Task(**x)
+            for x in data["task_history"]
+        ],
 
         "references":
         {
-
             "queries":
-            data.get(
-                "references",
-                {}
-            ).get(
-                "queries",
-                []
-            ),
+            data["references"]["queries"],
 
-
-            "docs":
-            []
-
+            "docs":[]
         },
 
-
-        "thread_id":
-            thread_id
-
+        "thread_id":thread_id
     }
 
 
 
 
 
-# =========================
-# Outline
-# =========================
+def get_outline(thread_id):
 
-def get_outline(
-    thread_id
-):
-
-    path = get_user_path(
+    path=get_user_path(
         thread_id
     )
 
 
-    file = f"{path}/outline.md"
-
+    file=f"{path}/outline.md"
 
 
     if not os.path.exists(file):
@@ -284,43 +205,28 @@ def get_outline(
 
 
 
-    with open(
-
+    return open(
         file,
-
         encoding="utf-8"
-
-    ) as f:
-
-        return f.read()
+    ).read()
 
 
 
 
+def save_outline(thread_id,text):
 
-def save_outline(
-    thread_id,
-    outline
-):
-
-    path = get_user_path(
+    path=get_user_path(
         thread_id
     )
 
 
     with open(
-
         f"{path}/outline.md",
-
         "w",
-
         encoding="utf-8"
-
     ) as f:
 
-        f.write(
-            outline
-        )
+        f.write(text)
 
 
-    return outline
+    return text
